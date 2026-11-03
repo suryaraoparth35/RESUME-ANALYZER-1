@@ -180,10 +180,52 @@ label{color:#d1ced8}
 .again{background:transparent;color:#c4b6f0;border:1px solid #3d3948}
 ::selection{background:#b8a5f3;color:#100f13}
 @media(max-width:760px){.wrap{padding:16px 14px 48px}.hero{margin:32px 0 18px}.hero h1{font-size:2.1rem}.top{grid-template-columns:1fr}.ring{width:135px;height:135px}.ring svg{width:135px;height:135px}.skill-row{grid-template-columns:1fr auto}.skill-row small{grid-column:1/-1}}
+/* Fresh, restrained black interface */
+:root{--p:#9bb6ff;--p2:#809eee;--ok:#7bd5b0;--bad:#f08a99;--warn:#e4bd7a;--bd:#282a2f;--card:#111317;--ink:#f2f3f5;--mut:#9298a3;color-scheme:dark}
+html,body{background:#090a0c}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#f2f3f5;background:#090a0c}
+.wrap{max-width:1050px;padding:24px 26px 70px}
+nav{height:42px;padding-bottom:14px;border-bottom:1px solid #202227;color:#d8dbe1;font-size:.82rem;letter-spacing:.02em}
+.logo{width:28px;height:28px;border-radius:7px;background:#9bb6ff;color:#0a0d14;box-shadow:none;font-size:.67rem}
+.hero{text-align:left;margin:44px 0 25px;max-width:690px}
+.hero::before{content:"CAREER TOOLKIT / 01";display:block;margin-bottom:14px;color:#9298a3;font-size:.65rem;font-weight:700;letter-spacing:.17em}
+.hero h1{max-width:620px;font-size:clamp(2.1rem,4vw,3.25rem);font-weight:620;line-height:1.08;letter-spacing:-.055em;color:#f4f5f7}
+.hero h1 span{background:none;color:#9bb6ff;-webkit-text-fill-color:#9bb6ff}
+.hero p{margin:14px 0 0;max-width:530px;font-size:.91rem;line-height:1.65;color:#a2a6af}
+.card{background:#111317;border:1px solid #282a2f;border-radius:11px;box-shadow:none;backdrop-filter:none;padding:20px}
+#form{padding:21px}.grid{gap:17px}
+h3{margin-bottom:12px;color:#bdc1ca;font-size:.67rem;font-weight:700;letter-spacing:.14em}
+#drop{min-height:158px;padding:16px;border:1px dashed #454951;border-radius:8px;background:#0d0f12;transition:border-color .18s,background .18s}
+#drop:hover,#drop.on{background:#11151d;border-color:#829de0;box-shadow:none;transform:none}
+#drop b{font-size:.9rem;font-weight:600}#drop small{font-size:.73rem;color:#858b95}
+.ico{font-size:1.4rem;filter:grayscale(1)}label{color:#c4c7cf}
+textarea,input[type=text]{background:#0c0e11!important;border:1px solid #2b2e34!important;border-radius:8px!important;color:#f0f1f4!important;box-shadow:none!important}
+textarea{height:158px;min-height:132px;padding:12px;font-size:.84rem;line-height:1.6}
+textarea::placeholder,input[type=text]::placeholder{color:#686e78}
+textarea:focus,input[type=text]:focus{outline:none!important;border-color:#8099d5!important;box-shadow:0 0 0 2px rgba(127,155,220,.1)!important}
+.input-hint{margin-top:7px;font-size:.68rem;color:#777d86}
+.btn{margin-top:13px;padding:13px;border-radius:8px;background:#9bb6ff;color:#0d111a;box-shadow:none;font-size:.88rem;font-weight:700}
+.btn:hover:not(:disabled){background:#adc3ff;transform:translateY(-1px)}.btn:disabled{background:#343941;color:#818792;opacity:1}
+.err{border:1px solid #4b2a30;border-radius:8px;background:#201316;color:#edabb3}
+#res{margin-top:22px}.top{grid-template-columns:190px minmax(0,1fr);gap:12px;margin-bottom:12px}
+#res>.top>.card{padding:17px}.ring{width:138px;height:138px}.ring svg{width:138px;height:138px}.ring circle{stroke-width:9}.ring .bg{stroke:#292c32}.ring strong{font-size:2.35rem}.ring span{font-size:.66rem;color:#9298a3}
+.verdict{margin-top:9px;font-size:.85rem;color:#e3e5ea}
+.bar{margin-bottom:11px}.bar div.l{font-size:.76rem;color:#d0d3d9}.track{height:5px;background:#2b2e34;border-radius:4px}.fill{background:#9bb6ff}
+.chip{padding:5px 9px;font-size:.72rem}.chip.ok{background:#122019;border:1px solid #263d31;color:#91dabc}.chip.bad{background:#241519;border:1px solid #42282d;color:#eda0a9}.chip.neu{background:#161b24;border:1px solid #2a3447;color:#acbce2}
+.rec{gap:11px;margin-bottom:8px;padding:13px;background:#121418;border:1px solid #292c32;border-radius:8px;animation:none}.rec i{width:3px}.rec h4{margin:5px 0;font-size:.88rem;font-weight:650;color:#eff0f3}.rec p{color:#adb1ba;font-size:.8rem;line-height:1.55}
+.pill{float:right;padding:3px 7px;border-radius:4px;background:#1d222c;border:1px solid #303744;color:#c6d3f2;font-size:.6rem}.High .pill{background:#29191d;border-color:#493037;color:#efa5ae}.Medium .pill{background:#282216;border-color:#453921;color:#e2c48e}.Low .pill{background:#142119;border-color:#2c4234;color:#9ed7b9}
+.tag{font-size:.61rem;letter-spacing:.12em;color:#969ba5}.rec blockquote{margin-top:8px;padding:8px 10px;border-left:2px solid #7086ba;border-radius:0 5px 5px 0;background:#171a20;color:#c1c5cf;font-size:.76rem}
+#skillPriority{gap:7px;margin:9px 0 18px}.skill-row{grid-template-columns:minmax(120px,1fr) 78px minmax(110px,1.3fr);gap:10px;padding:9px 11px;border:1px solid #282b31;border-radius:7px;background:#0e1013}.skill-row strong{font-size:.78rem}.skill-row small{font-size:.69rem;color:#969ba4}.skill-level{font-size:.63rem;letter-spacing:.08em}
+#res>h3{margin-top:22px!important}#qualitySummary p,#jobSafety p,#interviewQuestions p,#qualityBars p{color:#a7abb4!important}
+#jobSafety ul{margin:10px 0 0 18px;color:#a7abb4;font-size:.76rem;line-height:1.7}
+#recs button[data-vote]{padding:4px 8px;border:1px solid #32353c;border-radius:5px;background:#101216;color:#aeb2bc;font-size:.68rem}#recs button[data-vote]:hover{border-color:#829bd2;color:#d0dcf7}
+.again{background:transparent;border:1px solid #41454d;color:#c3d0ed}.again:hover:not(:disabled){background:#14171d}
+::selection{background:#9bb6ff;color:#0a0c10}
+@media(max-width:760px){.wrap{padding:17px 14px 50px}.hero{margin:34px 0 20px}.hero h1{font-size:2.25rem}.top{grid-template-columns:1fr}.ring{width:130px;height:130px}.ring svg{width:130px;height:130px}.skill-row{grid-template-columns:1fr auto}.skill-row small{grid-column:1/-1}}
 </style></head><body><div class="wrap">
-<nav><div class="logo">✦</div>Career Trust Engine</nav>
-<section class="hero"><h1>See how your resume fits <span>the role.</span></h1>
-<p>Get a focused match score, prioritized skill gaps, and practical next steps based on your resume and the job posting.</p></section>
+<nav><div class="logo">RA</div>Resume / Role Fit</nav>
+<section class="hero"><h1>A clearer path to <span>your next role.</span></h1>
+<p>Compare your resume with a real job posting. Get a focused score, ranked skill gaps, and practical next steps.</p></section>
 
 <section class="card" id="form"><div class="grid">
 <div><h3>1 · Your resume</h3>
