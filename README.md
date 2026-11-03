@@ -1,153 +1,140 @@
-# RESUME ANALYZER 1
+# Rolefit — AI Resume Analyzer
 
-Resume Analyzer is a web-based application that analyzes your resume against a target job description. Upload your resume as a PDF to receive an overall score out of 100, matched and missing skills, text similarity insights, and actionable recommendations to improve your resume.
-
-![Home Page](screenshots/home.png)
-
-![Analysis Results](screenshots/results.png)
+Rolefit compares a resume with a specific job description and gives a transparent fit score, prioritized skills gaps, and recommendations grounded in the resume. It runs locally with a React/Vite/Tailwind frontend and a FastAPI backend. Resume files are processed in memory and are not stored in a database or written to disk.
 
 ## Features
 
-- **PDF Resume Upload:** Upload your resume using file browsing or drag and drop.
-- **Resume Match Score:** Get an overall score out of 100.
-- **Score Breakdown:** View your performance across different resume evaluation categories.
-- **Skill Gap Analysis:** Identify skills that match the job description and skills that may be missing.
-- **Text Similarity:** Compare resume content with the job description using TF-IDF text similarity.
-- **Personalized Feedback:** Receive recommendations to improve resume relevance.
-- **Resume Quality Review:** Get a separate evidence-based review of section coverage, action-led bullets, measurable impact, dates, and contact details.
-- **Priority Focus Plan:** See which resume improvement to start with for a particular role, why it matters, and evidence detected in your resume.
-- **Job Posting Safety Scan:** Check the pasted posting for common scam signals and verification steps. This is a heuristic and does not verify an employer.
-- **Interview Practice:** Prepare with questions tied to the job description, skills, and resume evidence.
-- **Private Feedback Ranking:** Helpful/not-relevant feedback reorders recommendation categories in the current browser only; the resume and feedback do not train or tune a shared model.
-- **Modern User Interface:** Responsive lavender and purple-themed dashboard.
-- **Fast Analysis:** Analyze your resume and view results through a simple web interface.
+- PDF and DOCX resume uploads, up to 5 MB.
+- PDF/DOCX text extraction, section detection, contact details, and LinkedIn/GitHub link detection.
+- A curated taxonomy of 460+ skills across programming, web, data, cloud, security, product, and professional skills, with common aliases such as JS/JavaScript and ML/Machine Learning.
+- Live job description counter and validation: at least 80 words, placeholder and repetition checks, English word-frequency screening, job-related signals, and recognizable role skills. The backend repeats the authoritative validation before analysis.
+- A 0–100 score with the requested transparent weights:
 
-## How the Score Works
+| Category | Weight | What it measures |
+|---|---:|---|
+| Structure & sections | 20 | Contact details and summary, experience, education, skills, projects, certifications |
+| Priority skill match | 30 | JD skills weighted by requirement wording and repetition |
+| Experience relevance | 20 | TF-IDF/cosine relevance between experience evidence and the JD |
+| Quantified achievements | 10 | Measurable numbers and outcomes in resume lines |
+| Action verbs & writing | 10 | Clear action-led lines and less passive phrasing |
+| Formatting & length | 10 | Word count, page count, contact details, and long paragraphs |
 
-The application provides two separate signals: resume-to-role alignment and resume quality. Text similarity is capped at 10% of the role-alignment score; it is not a substitute for the quality review.
+- Personalized recommendations, skill priorities, matched/missing skill lists, and an evidence-based score explanation.
+- Existing interview practice prompts, job-posting safety scan, and local feedback ranking.
+- Optional Claude recommendation wording. The checkbox is opt-in; by default the app uses local rule-based recommendations. Claude receives the job description and analysis highlights, not the original resume file. Add an API key only if you want to enable this option.
+- No database, account, or resume file storage.
 
-The evaluation can include:
+The score is a coaching estimate, not an ATS score or a hiring prediction. A high score does not guarantee an interview.
 
-- Skills match
-- Keyword relevance
-- Text similarity (supporting signal only)
-- Relevant experience
-- Quantified achievements
-- Resume structure
-
-The role-alignment score is a coaching signal, not a hiring prediction. The resume-quality review checks presentation and evidence separately. Recommendations are deterministic and tailored to each uploaded resume and target description. Browser feedback only adjusts recommendation ordering locally; this project does not train a shared AI model. Shared model training would require an opt-in, representative dataset plus privacy controls and evaluation.
-
-## Tech Stack
-
-- **Backend:** Python, FastAPI
-- **Frontend:** HTML, CSS, JavaScript
-- **PDF Processing:** pdfplumber
-- **Text Similarity:** scikit-learn and TF-IDF
-- **API Communication:** REST API using JSON responses and multipart form data
-
-## Project Structure
+## Project structure
 
 ```text
 resume-analyzer/
 ├── app/
-│   ├── main.py          # API endpoint and application setup
-│   ├── parser.py        # Extracts text from PDF resumes
-│   ├── skills.py        # Skill extraction and matching
-│   ├── scorer.py        # Calculates resume score components
-│   ├── feedback.py      # Generates tailored, evidence-based recommendations
-│   ├── resume_quality.py # Reviews resume quality independently of job fit
-│   ├── job_safety.py    # Flags common job-posting scam patterns
-│   ├── interview.py     # Creates role-specific interview practice prompts
-│   └── semantic.py      # Text similarity supporting signal
+│   ├── main.py                  # FastAPI, validation, parsing, scoring, recommendations
+│   ├── skills_taxonomy.json     # 460+ curated canonical skills and aliases
+│   ├── feedback.py              # Resume/JD-specific recommendation rules
+│   ├── interview.py             # Interview practice prompts
+│   └── job_safety.py             # Job-posting safety heuristics
 ├── frontend/
-│   └── index.html       # Responsive web interface
-├── requirements.txt     # Python dependencies
-└── README.md            # Project documentation
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js            # Vite dev proxy to FastAPI
+│   └── src/
+│       ├── App.jsx               # Upload, live validation, results, feedback
+│       ├── main.jsx
+│       └── styles.css            # Tailwind CSS v4 entry and base styles
+├── .env.example
+├── .gitignore
+├── requirements.txt
+└── README.md
 ```
 
-## Getting Started
+## Requirements
 
-### Requirements
+- Python 3.11–3.13 recommended.
+- Node.js 20.19+ or 22.12+ and npm for the Vite frontend.
+- A modern browser.
 
-- Python installed on your system
-- Git
-- A modern web browser
+## Setup and run
 
-### 1. Clone the Repository
+Run the backend and frontend in separate terminals.
 
-Replace the example URL with your actual GitHub repository URL.
+### 1. Install backend dependencies
+
+From the repository root:
 
 ```bash
-git clone https://github.com/suryaraoparth35/RESUME-ANALYZER-1
-cd resume-analyzer-1
+python -m venv .venv
 ```
 
-### 2. Create a Virtual Environment
+Activate the environment:
 
-```bash
-python -m venv venv
+```powershell
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
 ```
 
-Activate it on Windows:
-
 ```bash
-venv\Scripts\activate
+# macOS / Linux
+source .venv/bin/activate
 ```
 
-On macOS or Linux:
+Then install dependencies:
 
 ```bash
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-
-```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
+python -m spacy download en_core_web_sm
 ```
 
-### 4. Start the Application
+The spaCy model improves contact-name extraction. If it is unavailable, the app uses spaCy's built-in English tokenizer and continues to work.
+
+### 2. Start FastAPI
+
+From the repository root:
 
 ```bash
-python -m uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-### 5. Open the Application
+The API is at `http://127.0.0.1:8000`; interactive API documentation is at `http://127.0.0.1:8000/docs`.
 
-Visit the following address in your browser:
+### 3. Install and start React/Vite
 
-http://127.0.0.1:8000
+In another terminal:
 
-## Usage
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-1. Open the application in your browser.
-2. Upload your resume in PDF format.
-3. Paste the job description for the position you are targeting.
-4. Click **Analyze my resume**.
-5. Review role alignment, the separate resume-quality assessment, skill gaps, and the ranked priority plan.
-6. Optionally review the job-posting safety signals and practice the role-specific interview questions.
-7. Improve your resume based on the feedback and analyze it again.
+Open `http://127.0.0.1:5173`. Vite forwards `/api` requests to the FastAPI server on port 8000.
 
-**Note:** The application currently supports text-based PDF resumes. Scanned or image-only PDFs may not be readable without OCR support.
+### Optional: enable Claude
 
-## Roadmap
+Copy `.env.example` to `.env` in the repository root and set `ANTHROPIC_API_KEY` to your key. Restart FastAPI. The UI then shows an opt-in checkbox. Analysis still works if the API key is missing or Claude is unavailable; rule-based coaching is used as the fallback.
 
-- [ ] OCR support for scanned PDF resumes
-- [ ] Expand the skills database for different job roles
-- [ ] Improve semantic similarity beyond TF-IDF
-- [ ] More detailed, role-specific recommendations
-- [ ] Downloadable analysis reports
-- [ ] Additional resume evaluation metrics
+### Production frontend
 
-## Contributing
+Build the static frontend:
 
-Suggestions, bug reports, and contributions are welcome. Feel free to open an issue or submit a pull request to help improve the project.
+```bash
+cd frontend
+npm run build
+```
 
-## Author
+Then run FastAPI from the repository root. FastAPI serves the generated `frontend/dist` application at `http://127.0.0.1:8000`.
 
-**Parth Shailesh Suryarao**
+## API endpoints
 
-Connect with me on [LinkedIn](https://www.linkedin.com/in/parth-suryarao-342875315/).
+- `GET /api/health` — service and optional Claude configuration status.
+- `POST /api/validate-jd` — live job description validation; form field `job_description`.
+- `POST /api/analyze` — multipart fields `resume`, `job_description`, and optional `use_llm`.
 
----
+## Privacy notes
 
+The backend reads uploaded file bytes into memory, extracts text, analyzes it, and returns JSON. It does not save uploaded files or results. If Claude is configured and a user selects Claude assistance, the application sends the job description and a compact analysis summary (which can include quoted resume evidence) to Anthropic to rewrite recommendations. Do not enable that option for confidential documents unless you are comfortable sharing those excerpts with the configured provider.
+
+Scanned/image-only PDFs need OCR and are not supported yet. DOCX page counts are estimated from word count because the document format does not reliably expose rendered page count.
