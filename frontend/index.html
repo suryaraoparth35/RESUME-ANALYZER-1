@@ -60,7 +60,7 @@ textarea:focus{outline:2px solid var(--p2)}
 <div><h3>1 · Your resume</h3>
 <div id="drop"><div><div class="ico">📄</div><b id="fname">Drop your PDF here</b><small id="fsub">or click to browse · max 5 MB</small></div></div>
 <input type="file" id="file" accept="application/pdf" hidden></div>
-<div><h3>2 · Job description</h3><textarea id="jd" placeholder="Paste the full job posting here…"></textarea></div></div>
+<div><h3>2 · Target job</h3><label for="targetRole" style="display:block;font-size:.85rem;margin:0 0 8px">Job title (optional)</label><input id="targetRole" type="text" placeholder="e.g. Junior Data Analyst" style="width:100%;border:1px solid var(--bd);border-radius:12px;padding:12px;font:inherit;font-size:.9rem;margin-bottom:10px"><label for="jd" style="display:block;font-size:.85rem;margin:0 0 8px">Job description</label><textarea id="jd" placeholder="Paste the full job posting here…"></textarea></div></div>
 <button class="btn" id="go" disabled>Analyze my resume</button>
 <div class="err" id="err"></div><div class="spin" id="spin">Reading your resume and comparing it to the job…</div></section>
 
@@ -69,11 +69,14 @@ textarea:focus{outline:2px solid var(--p2)}
 <circle class="bg" cx="60" cy="60" r="54"/><circle class="fg" id="fg" cx="60" cy="60" r="54" stroke-dasharray="339.3" stroke-dashoffset="339.3"/></svg>
 <div><strong id="score">0</strong><span>out of 100</span></div></div><div class="verdict" id="verdict"></div></div>
 <div class="card"><h3>Score breakdown</h3><div id="bars"></div></div></div>
+<div class="card" style="margin-bottom:18px"><h3>Resume quality · independent of job match</h3><div id="qualitySummary"></div><div id="qualityBars"></div></div>
 <div class="card" style="margin-bottom:18px"><h3>Skills in this job</h3>
 <p class="tag" style="margin-bottom:8px">✓ You have</p><div class="chips" id="matched"></div>
 <p class="tag" style="margin-bottom:8px">✗ Missing</p><div class="chips" id="missing"></div>
 <p class="tag" style="margin-bottom:8px">Also on your resume</p><div class="chips" id="extra"></div></div>
-<h3 style="margin:26px 0 12px">Your personalised recommendations</h3><div id="recs"></div>
+<h3 style="margin:26px 0 12px">Priority focus plan · start here</h3><p style="color:var(--mut);font-size:.88rem;margin:-4px 0 12px">Ranked from the requirements in this job and evidence found in your resume.</p><div id="recs"></div><p style="color:var(--mut);font-size:.75rem;margin:-2px 0 22px">Feedback adjusts recommendation order in this browser only. It does not train a shared model or save your resume.</p>
+<div class="card" style="margin-bottom:18px"><h3>Job posting safety scan</h3><div id="jobSafety"></div></div>
+<div class="card" style="margin-bottom:18px"><h3>Interview practice for this role</h3><div id="interviewQuestions"></div></div>
 <button class="btn again" id="again">↻ Analyze another resume</button></section></div>
 <script>
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -86,17 +89,22 @@ drop.onclick=()=>inp.click();inp.onchange=()=>pick(inp.files[0]);
 drop.addEventListener('drop',e=>pick(e.dataTransfer.files[0]));$('#jd').oninput=ready;
 function showErr(m){const e=$('#err');e.textContent=m;e.style.display='block'}
 const chips=(id,a,c,empty)=>$(id).innerHTML=a.length?a.map(s=>`<span class="chip ${c}">${esc(s)}</span>`).join(''):`<span class="tag">${empty}</span>`;
-$('#go').onclick=async()=>{const fd=new FormData();fd.append('resume',file);fd.append('job_description',$('#jd').value);
+$('#go').onclick=async()=>{const fd=new FormData();fd.append('resume',file);fd.append('job_description',$('#jd').value);fd.append('job_posting',$('#jd').value);fd.append('target_role',$('#targetRole').value);
 $('#go').disabled=true;$('#err').style.display='none';$('#spin').style.display='block';
 try{const r=await fetch('/analyze',{method:'POST',body:fd}),d=await r.json();if(!r.ok)throw new Error(d.detail||'Something went wrong.');render(d)}
 catch(e){showErr(e.message)}finally{$('#spin').style.display='none';ready()}};
 function render(d){$('#form').style.display='none';$('#res').style.display='block';scrollTo({top:0,behavior:'smooth'});
-$('#verdict').textContent=d.verdict+' · '+d.similarity+'% text similarity';
+$('#verdict').textContent=d.verdict+' · role-fit estimate';
 let n=0;const t=setInterval(()=>{n=Math.min(n+2,d.score);$('#score').textContent=n;if(n>=d.score)clearInterval(t)},18);
 requestAnimationFrame(()=>$('#fg').style.strokeDashoffset=339.3*(1-d.score/100));
 $('#bars').innerHTML=d.breakdown.map(b=>`<div class="bar"><div class="l"><span>${esc(b.name)}</span><span>${b.score} / ${b.max}</span></div><div class="track"><div class="fill" data-w="${b.score/b.max*100}"></div></div></div>`).join('');
 setTimeout(()=>document.querySelectorAll('.fill').forEach(f=>f.style.width=f.dataset.w+'%'),80);
 chips('#matched',d.matched,'ok','No direct matches found');chips('#missing',d.missing,'bad','Nothing missing 🎉');chips('#extra',d.extra,'neu','None detected');
-$('#recs').innerHTML=d.recommendations.map((r,i)=>`<div class="rec ${r.priority}" style="animation-delay:${i*70}ms"><i></i><div style="flex:1"><span class="pill">${r.priority} priority</span><span class="tag">${esc(r.category)}</span><h4>${esc(r.title)}</h4><p>${esc(r.detail)}</p>${r.evidence?`<blockquote>“${esc(r.evidence)}”</blockquote>`:''}</div></div>`).join('')||'<div class="card">Great news — nothing major to fix.</div>'}
+const quality=d.resume_quality;$('#qualitySummary').innerHTML=`<div style="font-size:2rem;font-weight:800">${quality.score}<small style="font-size:.9rem;color:var(--mut)"> / 100 resume-quality signal</small></div><p style="color:var(--mut);font-size:.8rem">This measures resume evidence and presentation independently of job-description similarity. Text similarity for this job is ${d.similarity}% and is only one supporting signal.</p>${quality.strengths.map(x=>`<p style="color:var(--ok);font-size:.85rem">✓ ${esc(x)}</p>`).join('')}${quality.improvements.map(x=>`<p style="color:var(--warn);font-size:.85rem">• ${esc(x)}</p>`).join('')}`;
+$('#qualityBars').innerHTML=quality.breakdown.map(b=>`<div class="bar"><div class="l"><span>${esc(b.label)}</span><span>${b.score} / 100</span></div><div class="track"><div class="fill" style="width:${b.score}%"></div></div><p style="font-size:.75rem;color:var(--mut);margin-top:5px">${esc(b.explanation)}</p></div>`).join('');
+const prefKey='resumeAnalyzerFocusPrefs';function getPrefs(){try{return JSON.parse(localStorage.getItem(prefKey)||'{}')}catch{return {}}}function renderRecs(items){window.currentRecs=items;const pref=getPrefs(),order={High:0,Medium:1,Low:2},sorted=[...items].sort((a,b)=>(order[a.priority]-order[b.priority])||((pref[b.category]||0)-(pref[a.category]||0))||(items.indexOf(a)-items.indexOf(b)));$('#recs').innerHTML=sorted.map((r,i)=>`<div class="rec ${r.priority}" style="animation-delay:${i*70}ms"><i></i><div style="flex:1"><span class="pill">${r.priority} priority</span><span class="tag">${esc(r.category)}</span><h4>${i===0?'START HERE · ':''}${esc(r.title)}</h4><p>${esc(r.detail)}</p>${r.evidence?`<blockquote>“${esc(r.evidence)}”</blockquote>`:''}<div style="margin-top:8px;font-size:.75rem;color:var(--mut)">Was this useful? <button data-category="${esc(r.category)}" data-vote="yes">Helpful</button> <button data-category="${esc(r.category)}" data-vote="no">Not relevant</button></div></div></div>`).join('')||'<div class="card">Great news — nothing major to fix.</div>'}renderRecs(d.focus_plan||d.recommendations);
+$('#recs').onclick=e=>{const b=e.target.closest('button[data-vote]');if(!b)return;const prefs=getPrefs(),key=b.dataset.category;prefs[key]=(prefs[key]||0)+(b.dataset.vote==='yes'?1:-1);try{localStorage.setItem(prefKey,JSON.stringify(prefs))}catch{}renderRecs(window.currentRecs||[])};
+const safety=d.job_safety;$('#jobSafety').innerHTML=safety.flags.length?`<p class="verdict" style="text-align:left">${safety.level} risk signals · ${safety.flags.length} pattern(s) flagged</p>${safety.flags.map(f=>`<div class="rec Medium"><i></i><div><h4>${esc(f.label)}</h4><p>${esc(f.explanation)}</p></div></div>`).join('')}`:'<p>No major patterns in this checklist were detected. That does not confirm the employer is legitimate.</p>';$('#jobSafety').innerHTML+=`<ul>${safety.next_steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><small style="color:var(--mut)">${esc(safety.disclaimer)}</small>`;
+$('#interviewQuestions').innerHTML=d.interview_questions.map((q,i)=>`<div class="rec"><i></i><div><span class="tag">Practice ${i+1}</span><h4>${esc(q.question)}</h4><p>${esc(q.why)}</p></div></div>`).join('')}
 $('#again').onclick=()=>{$('#res').style.display='none';$('#form').style.display='block';file=null;inp.value='';$('#fname').textContent='Drop your PDF here';$('#fsub').textContent='or click to browse · max 5 MB';$('#fg').style.strokeDashoffset=339.3;ready();scrollTo({top:0,behavior:'smooth'})};
 </script></body></html>

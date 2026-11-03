@@ -14,23 +14,28 @@ Resume Analyzer is a web-based application that analyzes your resume against a t
 - **Skill Gap Analysis:** Identify skills that match the job description and skills that may be missing.
 - **Text Similarity:** Compare resume content with the job description using TF-IDF text similarity.
 - **Personalized Feedback:** Receive recommendations to improve resume relevance.
+- **Resume Quality Review:** Get a separate evidence-based review of section coverage, action-led bullets, measurable impact, dates, and contact details.
+- **Priority Focus Plan:** See which resume improvement to start with for a particular role, why it matters, and evidence detected in your resume.
+- **Job Posting Safety Scan:** Check the pasted posting for common scam signals and verification steps. This is a heuristic and does not verify an employer.
+- **Interview Practice:** Prepare with questions tied to the job description, skills, and resume evidence.
+- **Private Feedback Ranking:** Helpful/not-relevant feedback reorders recommendation categories in the current browser only; the resume and feedback do not train or tune a shared model.
 - **Modern User Interface:** Responsive lavender and purple-themed dashboard.
 - **Fast Analysis:** Analyze your resume and view results through a simple web interface.
 
 ## How the Score Works
 
-The application calculates a resume score using multiple evaluation categories. The exact weights depend on the scoring configuration implemented in `app/scorer.py`.
+The application provides two separate signals: resume-to-role alignment and resume quality. Text similarity is capped at 10% of the role-alignment score; it is not a substitute for the quality review.
 
 The evaluation can include:
 
 - Skills match
 - Keyword relevance
-- Text similarity
+- Text similarity (supporting signal only)
 - Relevant experience
 - Quantified achievements
 - Resume structure
 
-The final score is intended to help users understand how closely their resume aligns with a particular job description.
+The role-alignment score is a coaching signal, not a hiring prediction. The resume-quality review checks presentation and evidence separately. Recommendations are deterministic and tailored to each uploaded resume and target description. Browser feedback only adjusts recommendation ordering locally; this project does not train a shared AI model. Shared model training would require an opt-in, representative dataset plus privacy controls and evaluation.
 
 ## Tech Stack
 
@@ -48,9 +53,12 @@ resume-analyzer/
 │   ├── main.py          # API endpoint and application setup
 │   ├── parser.py        # Extracts text from PDF resumes
 │   ├── skills.py        # Skill extraction and matching
-│   ├── scorer.py        # Calculates the resume score
-│   ├── feedback.py      # Generates feedback and recommendations
-│   └── semantic.py      # Text similarity comparison
+│   ├── scorer.py        # Calculates resume score components
+│   ├── feedback.py      # Generates tailored, evidence-based recommendations
+│   ├── resume_quality.py # Reviews resume quality independently of job fit
+│   ├── job_safety.py    # Flags common job-posting scam patterns
+│   ├── interview.py     # Creates role-specific interview practice prompts
+│   └── semantic.py      # Text similarity supporting signal
 ├── frontend/
 │   └── index.html       # Responsive web interface
 ├── requirements.txt     # Python dependencies
@@ -116,8 +124,9 @@ http://127.0.0.1:8000
 2. Upload your resume in PDF format.
 3. Paste the job description for the position you are targeting.
 4. Click **Analyze my resume**.
-5. Review your overall score, skills match, text similarity, and recommendations.
-6. Improve your resume based on the feedback and analyze it again.
+5. Review role alignment, the separate resume-quality assessment, skill gaps, and the ranked priority plan.
+6. Optionally review the job-posting safety signals and practice the role-specific interview questions.
+7. Improve your resume based on the feedback and analyze it again.
 
 **Note:** The application currently supports text-based PDF resumes. Scanned or image-only PDFs may not be readable without OCR support.
 

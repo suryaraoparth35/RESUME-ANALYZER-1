@@ -10,6 +10,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from .feedback import SECTIONS, _jd_terms, _years_covered, generate_recommendations
+from .resume_quality import analyze_resume_quality
+from .job_safety import analyze_job_safety
+from .interview import generate_interview_questions
 
 app = FastAPI(title="Resume Analyzer")
 INDEX = Path(__file__).resolve().parent.parent / "frontend" / "index.html"
@@ -54,7 +57,7 @@ def home():
 
 
 @app.post("/analyze")
-async def analyze(resume: UploadFile = File(...), job_description: str = Form(...)):
+async def analyze(resume: UploadFile = File(...), job_description: str = Form(...), job_posting: str = Form(""), target_role: str = Form("")):
     data = await resume.read()
     if not (resume.filename or "").lower().endswith(".pdf"):
         raise HTTPException(400, "Please upload a PDF resume.")
@@ -85,20 +88,36 @@ async def analyze(resume: UploadFile = File(...), job_description: str = Form(..
     quant = sum(bool(re.search(r"\d|%|\$|₹", l)) for l in lines)
 
     parts = {
-        "Skills match": (len(matched) / len(jd_skills) if jd_skills else min(sim / 0.4, 1), 35),
-        "Keyword relevance": (min(sim / 0.4, 1), 25),
-        "Experience": ((min(have / jd_years, 1) if have else 0.3) if jd_years
-                       else (0.7 if re.search(SECTIONS["experience"], rl) else 0.3), 15),
+        "Skills match": (len(matched) / len(jd_skills) if jd_skills else min(sim / 0.4, 1), 30),
+        "Text similarity (supporting signal)": (min(sim / 0.4, 1), 10),
+        "Relevant experience": ((min(have / jd_years, 1) if have else 0.3) if jd_years
+                                else (0.7 if re.search(SECTIONS["experience"], rl) else 0.3), 20),
         "Quantified impact": (min(quant / len(lines) / 0.4, 1) if len(lines) >= 4 else 0.5, 15),
         "Resume structure": (sum(bool(re.search(p, rl)) for p in SECTIONS.values()) / len(SECTIONS), 10),
+        "Bullet clarity": (
+            min(
+                sum(bool(re.match(r"(?:built|created|developed|designed|delivered|launched|led|managed|improved|reduced|increased|automated|implemented|analyzed|optimized)\b", line.strip(), re.I)) for line in lines)
+                / max(1, min(5, len(lines))),
+                1,
+            ),
+            15,
+        ),
     }
     breakdown = [{"name": k, "score": round(f * mx, 1), "max": mx} for k, (f, mx) in parts.items()]
     score = round(sum(b["score"] for b in breakdown))
     verdict = ("Excellent match" if score >= 80 else "Strong match" if score >= 65
                else "Moderate match" if score >= 45 else "Needs work")
 
-    recs = generate_recommendations(text, job_description, matched_skills=matched or None,
+    recommendation_jd = (f"Target role: {target_role.strip()}\n" if target_role.strip() else "") + job_description
+    recs = generate_recommendations(text, recommendation_jd, matched_skills=matched or None,
                                     missing_skills=missing or None, similarity=sim)
+    focus_plan = [dict(item, rank=i + 1, start_here=(i == 0)) for i, item in enumerate(recs)]
+    quality = analyze_resume_quality(text)
+    safety = analyze_job_safety(job_posting or job_description)
+    questions = generate_interview_questions(text, job_description, matched, missing)
     return {"score": score, "verdict": verdict, "breakdown": breakdown, "matched": matched,
             "missing": missing, "extra": extra[:12], "similarity": round(sim * 100),
-            "words": len(text.split()), "recommendations": recs}
+            "words": len(text.split()), "resume_quality": quality, "job_safety": safety,
+            "interview_questions": questions, "focus_plan": focus_plan, "recommendations": recs,
+            "target_role": target_role.strip(),
+            "notice": "Coaching signals only. Review suggestions and only claim experience you can support."}
