@@ -34,16 +34,48 @@ def has_term(text, term):
 
 
 def jd_skill_list(jd):
-    """Known skills found in the JD; if few, top-up with the JD's own most important keywords."""
-    skills = find_skills(jd)
-    if len(skills) < 8:
-        ranked, _ = _jd_terms(jd, top=40)
-        for t in ranked:
-            if len(skills) >= 12:
-                break
-            if len(t) > 3 and not any(t in x or x in t for x in skills):
-                skills.append(t)
-    return skills
+    """Only assess recognized skills; arbitrary frequent JD words are not skills."""
+    return list(dict.fromkeys(find_skills(jd)))
+
+
+def validate_job_description(text: str):
+    """Reject pasted fragments, gibberish, and non-job text before analysis."""
+    words = re.findall(r"[A-Za-z][A-Za-z+#.\-/]*", text)
+    lower = text.lower()
+    if len(words) < 45:
+        return "Paste a complete job description (at least 45 words), including responsibilities or requirements."
+    if len(set(w.lower() for w in words)) < 18:
+        return "This text has too little variety to identify a real job description. Paste the full posting."
+    job_signals = ("responsibilit", "qualif", "require", "skill", "experience", "role", "candidate", "we are looking", "you will", "what you")
+    if sum(signal in lower for signal in job_signals) < 2:
+        return "I couldn't identify job responsibilities or qualifications. Paste a job posting, not general text."
+    if len(jd_skill_list(text)) < 2:
+        return "I couldn't identify enough role-specific skills. Include the job's tools, technologies, or core competencies."
+    return None
+
+
+def prioritize_skills(jd: str, skills: list[str]):
+    """Rank skills using requirement language, sentence frequency, and emphasis."""
+    sentences = re.split(r"(?<=[.!?])\s+|\n+", jd.lower())
+    result = []
+    for skill in skills:
+        hits = [s for s in sentences if has_term(s, skill)]
+        required = any(re.search(r"\b(required|must|essential|mandatory|proficien\w+|minimum)\b", s) for s in hits)
+        preferred = any(re.search(r"\b(preferred|nice to have|bonus|desirable)\b", s) for s in hits)
+        occurrences = jd.lower().count(skill)
+        if required:
+            level = "High"
+        elif preferred:
+            level = "Medium" if len(hits) > 1 or occurrences > 1 else "Low"
+        elif len(hits) >= 3 or occurrences >= 3:
+            level = "High"
+        elif len(hits) >= 2 or occurrences >= 2:
+            level = "Medium"
+        else:
+            level = "Low"
+        result.append({"skill": skill, "priority": level, "reason": "Explicitly required" if required else "Preferred" if preferred else "Repeated in the posting" if len(hits) > 1 else "Mentioned once"})
+    rank = {"High": 0, "Medium": 1, "Low": 2}
+    return sorted(result, key=lambda item: (rank[item["priority"]], -sum(1 for s in sentences if has_term(s, item["skill"]))))
 
 
 def extract_text(data: bytes) -> str:
@@ -63,8 +95,9 @@ async def analyze(resume: UploadFile = File(...), job_description: str = Form(..
         raise HTTPException(400, "Please upload a PDF resume.")
     if len(data) > 5 * 1024 * 1024:
         raise HTTPException(413, "PDF is larger than 5 MB.")
-    if len(job_description.strip()) < 30:
-        raise HTTPException(400, "Please paste a fuller job description.")
+    jd_error = validate_job_description(job_description)
+    if jd_error:
+        raise HTTPException(422, jd_error)
     try:
         text = extract_text(data)
     except Exception:
@@ -74,9 +107,10 @@ async def analyze(resume: UploadFile = File(...), job_description: str = Form(..
 
     rl = text.lower()
     jd_skills = jd_skill_list(job_description)
+    skill_priorities = prioritize_skills(job_description, jd_skills)
     matched = [s for s in jd_skills if has_term(text, s)]
     missing = [s for s in jd_skills if s not in matched]
-    extra = [s for s in find_skills(text) if s not in jd_skills]
+    extra = list(dict.fromkeys(s for s in find_skills(text) if s not in jd_skills))
 
     vec = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), sublinear_tf=True)
     m = vec.fit_transform([text, job_description])
@@ -87,12 +121,14 @@ async def analyze(resume: UploadFile = File(...), job_description: str = Form(..
     lines = [l for l in text.splitlines() if 30 <= len(l.strip()) <= 260]
     quant = sum(bool(re.search(r"\d|%|\$|₹", l)) for l in lines)
 
+    priority_weight = {"High": 3.0, "Medium": 1.7, "Low": 1.0}
+    skill_weight_total = sum(priority_weight[item["priority"]] for item in skill_priorities)
+    weighted_match = (sum(priority_weight[item["priority"]] for item in skill_priorities if item["skill"] in matched) / skill_weight_total) if skill_weight_total else 0
     parts = {
-        "Skills match": (len(matched) / len(jd_skills) if jd_skills else min(sim / 0.4, 1), 30),
-        "Text similarity (supporting signal)": (min(sim / 0.4, 1), 10),
+        "Priority-weighted skills": (weighted_match, 40),
         "Relevant experience": ((min(have / jd_years, 1) if have else 0.3) if jd_years
                                 else (0.7 if re.search(SECTIONS["experience"], rl) else 0.3), 20),
-        "Quantified impact": (min(quant / len(lines) / 0.4, 1) if len(lines) >= 4 else 0.5, 15),
+        "Evidence of impact": (min(quant / len(lines) / 0.4, 1) if len(lines) >= 4 else 0.5, 15),
         "Resume structure": (sum(bool(re.search(p, rl)) for p in SECTIONS.values()) / len(SECTIONS), 10),
         "Bullet clarity": (
             min(
@@ -100,8 +136,9 @@ async def analyze(resume: UploadFile = File(...), job_description: str = Form(..
                 / max(1, min(5, len(lines))),
                 1,
             ),
-            15,
+            10,
         ),
+        "Language overlap (supporting)": (min(sim / 0.4, 1), 5),
     }
     breakdown = [{"name": k, "score": round(f * mx, 1), "max": mx} for k, (f, mx) in parts.items()]
     score = round(sum(b["score"] for b in breakdown))
@@ -111,12 +148,23 @@ async def analyze(resume: UploadFile = File(...), job_description: str = Form(..
     recommendation_jd = (f"Target role: {target_role.strip()}\n" if target_role.strip() else "") + job_description
     recs = generate_recommendations(text, recommendation_jd, matched_skills=matched or None,
                                     missing_skills=missing or None, similarity=sim)
+    # Make skill-gap cards inherit the priority inferred from this job posting.
+    priority_map = {item["skill"]: item for item in skill_priorities}
+    for item in recs:
+        if item.get("category") == "Missing skill":
+            skill = item["title"].removeprefix("Add evidence of “").removesuffix("”")
+            if skill in priority_map:
+                item["priority"] = priority_map[skill]["priority"]
+                item["job_priority_reason"] = priority_map[skill]["reason"]
+    priority_order = {"High": 0, "Medium": 1, "Low": 2}
+    recs.sort(key=lambda item: priority_order.get(item.get("priority"), 3))
     focus_plan = [dict(item, rank=i + 1, start_here=(i == 0)) for i, item in enumerate(recs)]
     quality = analyze_resume_quality(text)
     safety = analyze_job_safety(job_posting or job_description)
     questions = generate_interview_questions(text, job_description, matched, missing)
     return {"score": score, "verdict": verdict, "breakdown": breakdown, "matched": matched,
             "missing": missing, "extra": extra[:12], "similarity": round(sim * 100),
+            "skill_priorities": skill_priorities,
             "words": len(text.split()), "resume_quality": quality, "job_safety": safety,
             "interview_questions": questions, "focus_plan": focus_plan, "recommendations": recs,
             "target_role": target_role.strip(),
